@@ -238,6 +238,12 @@
         display: none;
       }
 
+      .preview-note {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
       .danger {
         color: var(--danger);
       }
@@ -310,10 +316,16 @@
           </div>
 
           <div class="actions">
+            <button class="button secondary" id="photoBoothButton" type="button">Abrir Photo Booth</button>
             <button class="button" id="startCameraButton" type="button">Ativar camera</button>
             <button class="button secondary" id="uploadButton" type="button">Usar foto</button>
             <input class="hidden-input" id="imageInput" type="file" accept="image/*" />
           </div>
+
+          <p class="preview-note">
+            Caminho alternativo: abra o Photo Booth, tire uma foto e envie a imagem aqui.
+            Voce tambem pode colar uma imagem com <strong>Cmd+V</strong>.
+          </p>
 
           <p class="hint" id="hintText">
             Clique em "Ativar camera" para liberar a webcam no navegador.
@@ -351,6 +363,7 @@
       const matchImage = document.getElementById("matchImage");
       const gallery = document.getElementById("gallery");
       const hintText = document.getElementById("hintText");
+      const photoBoothButton = document.getElementById("photoBoothButton");
       const startCameraButton = document.getElementById("startCameraButton");
       const uploadButton = document.getElementById("uploadButton");
       const imageInput = document.getElementById("imageInput");
@@ -383,6 +396,28 @@
       }
 
       function bindActions() {
+        photoBoothButton.addEventListener("click", async () => {
+          photoBoothButton.disabled = true;
+          photoBoothButton.textContent = "Abrindo...";
+          try {
+            const response = await fetch("/api/open-photo-booth", {
+              method: "POST"
+            });
+            const data = await response.json();
+            if (data.status === "ok") {
+              setHint("Photo Booth aberto. Tire uma foto, salve e envie o arquivo para o painel.");
+            } else {
+              setHint(data.message || "Nao foi possivel abrir o Photo Booth.", true);
+            }
+          } catch (error) {
+            setHint("Falha ao abrir o Photo Booth a partir do painel.", true);
+            console.error(error);
+          } finally {
+            photoBoothButton.disabled = false;
+            photoBoothButton.textContent = "Abrir Photo Booth";
+          }
+        });
+
         startCameraButton.addEventListener("click", async () => {
           startCameraButton.disabled = true;
           startCameraButton.textContent = "Solicitando...";
@@ -403,12 +438,29 @@
         imageInput.addEventListener("change", async (event) => {
           const file = event.target.files?.[0];
           if (!file) return;
-          const reader = new FileReader();
-          reader.onload = async () => {
-            await sendFrame(reader.result);
-          };
-          reader.readAsDataURL(file);
+          await loadFile(file);
         });
+
+        document.addEventListener("paste", async (event) => {
+          const items = Array.from(event.clipboardData?.items || []);
+          const imageItem = items.find((item) => item.type.startsWith("image/"));
+          if (!imageItem) return;
+          const file = imageItem.getAsFile();
+          if (!file) return;
+          await loadFile(file);
+          setHint("Imagem colada no painel e enviada para analise.");
+        });
+      }
+
+      async function loadFile(file) {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          matchImage.src = reader.result;
+          statusOverlay.textContent = "Imagem carregada";
+          captureState.textContent = "Arquivo";
+          await sendFrame(reader.result);
+        };
+        reader.readAsDataURL(file);
       }
 
       async function loadMemes() {

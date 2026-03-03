@@ -1,6 +1,7 @@
 import base64
 import json
 import mimetypes
+import subprocess
 import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -266,6 +267,8 @@ class MemePanelHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        if parsed.path == "/api/open-photo-booth":
+            return self.open_photo_booth()
         if parsed.path != "/api/match":
             self.send_error(HTTPStatus.NOT_FOUND, "Rota nao encontrada.")
             return
@@ -292,6 +295,32 @@ class MemePanelHandler(BaseHTTPRequestHandler):
         response = SERVICE.match_data_url(image_data)
         status = HTTPStatus.OK if response["status"] != "error" else HTTPStatus.BAD_REQUEST
         self.send_json(response, status=status)
+
+    def open_photo_booth(self):
+        try:
+            subprocess.run(
+                ["open", "-a", "Photo Booth"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as exc:
+            self.send_json(
+                {
+                    "status": "error",
+                    "message": "Nao foi possivel abrir o Photo Booth.",
+                    "detail": exc.stderr.strip() or exc.stdout.strip(),
+                },
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+
+        self.send_json(
+            {
+                "status": "ok",
+                "message": "Photo Booth aberto. Tire uma foto e envie o arquivo para o painel.",
+            }
+        )
 
     def serve_file(self, file_path, content_type=None):
         if not file_path.exists() or not file_path.is_file():
