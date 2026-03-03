@@ -44,7 +44,33 @@ pip install mediapipe opencv-python numpy
 python3 main.py
 ```
 
-The first time you run it, the app will automatically download the required MediaPipe models (~7MB total).
+The app now starts a local web panel and opens your browser automatically, so camera permission is handled by the browser instead of the terminal-hosted Python window.
+
+### VSCode Flow
+
+If you want to run it in a VSCode-style workflow:
+
+- Open the folder in VSCode
+- Run the task `Run Meme Matcher Web`
+- Or start the launch profile `Meme Matcher Web`
+
+This keeps Python only as the local backend and leaves camera permission to the browser.
+
+### Web Panel Route
+
+If you want to start only the local route without the launcher:
+
+```bash
+python3 web_panel.py
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080
+```
+
+The browser will request camera permission and the panel will show the live camera feed plus the best meme match.
 
 ## How to Use
 
@@ -111,4 +137,3 @@ This project is for educational and entertainment purposes.
 - [ ] Mobile app version
 
 ---
-

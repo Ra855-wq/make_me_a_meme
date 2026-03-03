@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meme Matcher Web Panel</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #121a2b;
+        --panel-soft: #18233b;
+        --line: #263553;
+        --text: #eef4ff;
+        --muted: #9fb0cf;
+        --accent: #67e8f9;
+        --accent-2: #fbbf24;
+        --danger: #f87171;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(103, 232, 249, 0.18), transparent 28%),
+          radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 24%),
+          linear-gradient(135deg, #08101c, #0e1830 55%, #0d1326);
+        min-height: 100vh;
+      }
+
+      .shell {
+        width: min(1400px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 24px 0 32px;
+      }
+
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(2.4rem, 4vw, 4rem);
+        line-height: 0.95;
+        letter-spacing: -0.05em;
+      }
+
+      .hero p {
+        margin: 8px 0 0;
+        max-width: 700px;
+        color: var(--muted);
+        font-size: 1.02rem;
+      }
+
+      .badge {
+        border: 1px solid rgba(103, 232, 249, 0.25);
+        background: rgba(103, 232, 249, 0.08);
+        color: var(--accent);
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-size: 0.88rem;
+        white-space: nowrap;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 18px;
+      }
+
+      .card {
+        background: linear-gradient(180deg, rgba(18, 26, 43, 0.96), rgba(13, 19, 33, 0.98));
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 18px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: start;
+        margin-bottom: 14px;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+
+      .card p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .camera-frame,
+      .match-frame {
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        border-radius: 18px;
+        overflow: hidden;
+        background: #05070d;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        position: relative;
+      }
+
+      video,
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      #matchImage {
+        object-fit: contain;
+        background:
+          radial-gradient(circle at top, rgba(103, 232, 249, 0.13), transparent 30%),
+          #0a0f17;
+      }
+
+      .camera-overlay {
+        position: absolute;
+        inset: auto 18px 18px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: rgba(8, 12, 22, 0.64);
+        backdrop-filter: blur(12px);
+      }
+
+      .camera-overlay strong,
+      .camera-overlay span {
+        display: block;
+      }
+
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .stat {
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 14px;
+      }
+
+      .stat label {
+        display: block;
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+      }
+
+      .stat strong {
+        font-size: 1.05rem;
+      }
+
+      .gallery {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+      }
+
+      .thumb {
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        overflow: hidden;
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+      }
+
+      .thumb.active {
+        transform: translateY(-4px);
+        border-color: rgba(103, 232, 249, 0.45);
+        box-shadow: 0 16px 34px rgba(103, 232, 249, 0.12);
+      }
+
+      .thumb img {
+        aspect-ratio: 1 / 1;
+      }
+
+      .thumb span {
+        display: block;
+        padding: 10px;
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      .hint {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .button {
+        appearance: none;
+        border: 1px solid rgba(103, 232, 249, 0.28);
+        background: linear-gradient(180deg, rgba(103, 232, 249, 0.18), rgba(103, 232, 249, 0.08));
+        color: var(--text);
+        padding: 12px 16px;
+        border-radius: 14px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .button.secondary {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .hidden-input {
+        display: none;
+      }
+
+      .danger {
+        color: var(--danger);
+      }
+
+      @media (max-width: 960px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          flex-direction: column;
+          align-items: start;
+        }
+
+        .status-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <h1>Meme Matcher<br />Web Panel</h1>
+          <p>
+            A rota local usa a camera do navegador, envia quadros para o backend
+            Python e mostra o meme mais parecido em tempo real.
+          </p>
+        </div>
+        <div class="badge">Rota local: <span id="routeLabel"></span></div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2>Camera do navegador</h2>
+              <p>Permita o acesso quando o browser solicitar.</p>
+            </div>
+          </div>
+
+          <div class="camera-frame">
+            <video id="video" autoplay playsinline muted></video>
+            <div class="camera-overlay">
+              <div>
+                <span style="color: var(--muted)">Status</span>
+                <strong id="statusOverlay">Inicializando camera...</strong>
+              </div>
+              <div style="text-align: right">
+                <span style="color: var(--muted)">Captura</span>
+                <strong id="captureState">Aguardando</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-grid">
+            <div class="stat">
+              <label>Status do backend</label>
+              <strong id="backendStatus">Conectando...</strong>
+            </div>
+            <div class="stat">
+              <label>Meme atual</label>
+              <strong id="matchName">Nenhum</strong>
+            </div>
+            <div class="stat">
+              <label>Pontuacao</label>
+              <strong id="matchScore">--</strong>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="button" id="startCameraButton" type="button">Ativar camera</button>
+            <button class="button secondary" id="uploadButton" type="button">Usar foto</button>
+            <input class="hidden-input" id="imageInput" type="file" accept="image/*" />
+          </div>
+
+          <p class="hint" id="hintText">
+            Clique em "Ativar camera" para liberar a webcam no navegador.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <h2>Meme detectado</h2>
+              <p>A imagem atualiza a cada nova leitura enviada ao servidor.</p>
+            </div>
+          </div>
+
+          <div class="match-frame">
+            <img id="matchImage" alt="Meme detectado" />
+          </div>
+
+          <div class="gallery" id="gallery"></div>
+        </article>
+      </section>
+    </main>
+
+    <canvas id="captureCanvas" width="640" height="480" hidden></canvas>
+
+    <script>
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("captureCanvas");
+      const routeLabel = document.getElementById("routeLabel");
+      const statusOverlay = document.getElementById("statusOverlay");
+      const captureState = document.getElementById("captureState");
+      const backendStatus = document.getElementById("backendStatus");
+      const matchName = document.getElementById("matchName");
+      const matchScore = document.getElementById("matchScore");
+      const matchImage = document.getElementById("matchImage");
+      const gallery = document.getElementById("gallery");
+      const hintText = document.getElementById("hintText");
+      const startCameraButton = document.getElementById("startCameraButton");
+      const uploadButton = document.getElementById("uploadButton");
+      const imageInput = document.getElementById("imageInput");
+
+      const state = {
+        ready: false,
+        sending: false,
+        loopStarted: false,
+        memes: [],
+        activeUrl: null,
+      };
+
+      routeLabel.textContent = window.location.origin;
+
+      function setHint(message, isDanger = false) {
+        hintText.textContent = message;
+        hintText.classList.toggle("danger", isDanger);
+      }
+
+      async function boot() {
+        await loadMemes();
+        await checkBackend();
+        bindActions();
+      }
+
+      async function checkBackend() {
+        const response = await fetch("/api/health");
+        const data = await response.json();
+        backendStatus.textContent = data.status === "ok" ? "Online" : "Falha";
+      }
+
+      function bindActions() {
+        startCameraButton.addEventListener("click", async () => {
+          startCameraButton.disabled = true;
+          startCameraButton.textContent = "Solicitando...";
+          await startCamera();
+          if (!state.ready) {
+            startCameraButton.disabled = false;
+            startCameraButton.textContent = "Tentar novamente";
+          } else {
+            startCameraButton.textContent = "Camera ativa";
+            startLoop();
+          }
+        });
+
+        uploadButton.addEventListener("click", () => {
+          imageInput.click();
+        });
+
+        imageInput.addEventListener("change", async (event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async () => {
+            await sendFrame(reader.result);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function loadMemes() {
+        const response = await fetch("/api/memes");
+        const data = await response.json();
+        state.memes = data.memes || [];
+        gallery.innerHTML = "";
+
+        for (const meme of state.memes) {
+          const card = document.createElement("div");
+          card.className = "thumb";
+          card.dataset.url = meme.url;
+          card.innerHTML = `
+            <img src="${meme.url}" alt="${meme.name}" />
+            <span>${meme.name}</span>
+          `;
+          gallery.appendChild(card);
+        }
+      }
+
+      async function startCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+              width: { ideal: 960 },
+              height: { ideal: 720 }
+            },
+            audio: false
+          });
+
+          video.srcObject = stream;
+          state.ready = true;
+          statusOverlay.textContent = "Camera ativa";
+          captureState.textContent = "Transmitindo";
+          setHint("Camera liberada. O navegador agora envia quadros para o matcher.");
+          backendStatus.textContent = "Online";
+        } catch (error) {
+          statusOverlay.textContent = "Camera bloqueada";
+          captureState.textContent = "Sem acesso";
+          const reason = `${error?.name || "Erro"}${error?.message ? `: ${error.message}` : ""}`;
+          setHint(`O navegador nao conseguiu acessar a camera. ${reason}. Se preciso, abra a permissao do site e tente novamente.`, true);
+          console.error(error);
+        }
+      }
+
+      function startLoop() {
+        if (state.loopStarted) return;
+        state.loopStarted = true;
+        setInterval(async () => {
+          if (!state.ready || state.sending || video.readyState < 2) {
+            return;
+          }
+
+          const context = canvas.getContext("2d");
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const image = canvas.toDataURL("image/jpeg", 0.84);
+          await sendFrame(image);
+        }, 650);
+      }
+
+      async function sendFrame(image) {
+        state.sending = true;
+        captureState.textContent = "Analisando";
+        try {
+          const response = await fetch("/api/match", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ image })
+          });
+
+          const data = await response.json();
+          renderMatch(data);
+        } catch (error) {
+          backendStatus.textContent = "Falha na rota";
+          setHint("O backend nao respondeu. Verifique se o servidor Python continua ativo.", true);
+          console.error(error);
+        } finally {
+          captureState.textContent = state.ready ? "Transmitindo" : "Aguardando";
+          state.sending = false;
+        }
+      }
+
+      function renderMatch(data) {
+        if (data.status === "ok" && data.match) {
+          backendStatus.textContent = "Online";
+          matchName.textContent = data.match.name;
+          matchScore.textContent = data.score;
+          statusOverlay.textContent = data.message;
+          matchImage.src = data.match.url;
+          highlightThumb(data.match.url);
+          setHint("Correspondencia atualizada em tempo real.");
+          return;
+        }
+
+        if (data.status === "no-face") {
+          matchName.textContent = "Nenhum";
+          matchScore.textContent = "--";
+          statusOverlay.textContent = "Nenhum rosto detectado";
+          matchImage.removeAttribute("src");
+          highlightThumb(null);
+          setHint("Aproxime o rosto e mantenha boa iluminacao para melhorar a leitura.");
+          return;
+        }
+
+        backendStatus.textContent = "Erro";
+        setHint(data.message || "Falha ao processar a imagem enviada.", true);
+      }
+
+      function highlightThumb(activeUrl) {
+        state.activeUrl = activeUrl;
+        for (const thumb of gallery.querySelectorAll(".thumb")) {
+          thumb.classList.toggle("active", thumb.dataset.url === activeUrl);
+        }
+      }
+
+      boot().catch((error) => {
+        backendStatus.textContent = "Erro";
+        setHint("Nao foi possivel iniciar o painel web.", true);
+        console.error(error);
+      });
+    </script>
+  </body>
+</html>
