@@ -438,29 +438,12 @@
         imageInput.addEventListener("change", async (event) => {
           const file = event.target.files?.[0];
           if (!file) return;
-          await loadFile(file);
+          const reader = new FileReader();
+          reader.onload = async () => {
+            await sendFrame(reader.result);
+          };
+          reader.readAsDataURL(file);
         });
-
-        document.addEventListener("paste", async (event) => {
-          const items = Array.from(event.clipboardData?.items || []);
-          const imageItem = items.find((item) => item.type.startsWith("image/"));
-          if (!imageItem) return;
-          const file = imageItem.getAsFile();
-          if (!file) return;
-          await loadFile(file);
-          setHint("Imagem colada no painel e enviada para analise.");
-        });
-      }
-
-      async function loadFile(file) {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          matchImage.src = reader.result;
-          statusOverlay.textContent = "Imagem carregada";
-          captureState.textContent = "Arquivo";
-          await sendFrame(reader.result);
-        };
-        reader.readAsDataURL(file);
       }
 
       async function loadMemes() {

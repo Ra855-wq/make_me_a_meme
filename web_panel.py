@@ -246,6 +246,10 @@ class MatcherService:
 SERVICE = MatcherService(assets_folder=str(ASSETS_DIR))
 
 
+class MemePanelServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+
+
 class MemePanelHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -362,7 +366,7 @@ def run_server(host="127.0.0.1", port=8080):
 
 
 def create_server(host="127.0.0.1", port=8080):
-    return ThreadingHTTPServer((host, port), MemePanelHandler)
+    return MemePanelServer((host, port), MemePanelHandler)
 
 
 if __name__ == "__main__":
