@@ -1,6 +1,7 @@
 import base64
 import json
 import mimetypes
+import platform
 import subprocess
 import threading
 from http import HTTPStatus
@@ -257,6 +258,8 @@ class MemePanelHandler(BaseHTTPRequestHandler):
             return self.serve_file(WEB_DIR / "index.html", "text/html; charset=utf-8")
         if path == "/api/health":
             return self.send_json({"status": "ok"})
+        if path == "/api/capabilities":
+            return self.send_json(get_capabilities(client_safe=True))
         if path == "/api/memes":
             return self.send_json({"memes": SERVICE.list_memes()})
         if path.startswith("/assets/"):
@@ -297,19 +300,32 @@ class MemePanelHandler(BaseHTTPRequestHandler):
         self.send_json(response, status=status)
 
     def open_photo_booth(self):
-        try:
-            subprocess.run(
-                ["open", "-a", "Photo Booth"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as exc:
+        capabilities = get_capabilities()
+        photo_app = capabilities["photo_app"]
+        if not photo_app["supported"]:
             self.send_json(
                 {
                     "status": "error",
-                    "message": "Nao foi possivel abrir o Photo Booth.",
-                    "detail": exc.stderr.strip() or exc.stdout.strip(),
+                    "message": photo_app["message"],
+                },
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+
+        try:
+            subprocess.run(
+                photo_app["command"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            self.send_json(
+                {
+                    "status": "error",
+                    "message": f"Nao foi possivel abrir {photo_app['label']}.",
+                    "detail": str(exc).strip(),
                 },
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
@@ -318,7 +334,7 @@ class MemePanelHandler(BaseHTTPRequestHandler):
         self.send_json(
             {
                 "status": "ok",
-                "message": "Photo Booth aberto. Tire uma foto e envie o arquivo para o painel.",
+                "message": f"{photo_app['label']} aberto. Tire uma foto e envie o arquivo para o painel.",
             }
         )
 
@@ -349,8 +365,9 @@ class MemePanelHandler(BaseHTTPRequestHandler):
         return
 
 
-def run_server(host="127.0.0.1", port=8080):
-    server = create_server(host, port)
+def run_server():
+    server = create_server()
+    host, port = server.server_address
     print(f"Painel web disponivel em http://{host}:{port}")
     print("Abra a rota no navegador e permita o acesso a camera.")
     try:
@@ -361,8 +378,27 @@ def run_server(host="127.0.0.1", port=8080):
         server.server_close()
 
 
-def create_server(host="127.0.0.1", port=8080):
-    return ThreadingHTTPServer((host, port), MemePanelHandler)
+def create_server():
+    return ThreadingHTTPServer(("localhost", 0), MemePanelHandler)
+
+
+def get_capabilities(client_safe=False):
+    system = platform.system().lower()
+    photo_app = {
+        "supported": system == "darwin",
+        "label": "Photo Booth",
+        "command": ["open", "-a", "Photo Booth"] if system == "darwin" else None,
+        "message": "" if system == "darwin" else "Abrir Photo Booth pelo painel so e suportado no macOS.",
+    }
+
+    if client_safe:
+        photo_app = {
+            "supported": photo_app["supported"],
+            "label": photo_app["label"],
+            "message": photo_app["message"],
+        }
+
+    return {"photo_app": photo_app}
 
 
 if __name__ == "__main__":

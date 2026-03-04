@@ -7,10 +7,6 @@ from contextlib import closing
 from web_panel import create_server
 
 
-HOST = "127.0.0.1"
-PORT = 8080
-
-
 def wait_for_server(host, port, timeout=5.0):
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -23,15 +19,16 @@ def wait_for_server(host, port, timeout=5.0):
 
 
 def main():
-    server = create_server(HOST, PORT)
+    server = create_server()
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
 
-    url = f"http://{HOST}:{PORT}"
+    host, port = server.server_address
+    url = f"http://{host}:{port}"
     print(f"Painel web iniciado em {url}")
     print("O navegador sera aberto para capturar a camera com permissao do browser.")
 
-    if wait_for_server(HOST, PORT):
+    if wait_for_server(host, port):
         webbrowser.open(url, new=1)
     else:
         print("O servidor demorou para responder. Abra a URL manualmente se necessario.")

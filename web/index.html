@@ -367,6 +367,7 @@
       const startCameraButton = document.getElementById("startCameraButton");
       const uploadButton = document.getElementById("uploadButton");
       const imageInput = document.getElementById("imageInput");
+      const previewNote = document.querySelector(".preview-note");
 
       const state = {
         ready: false,
@@ -374,6 +375,7 @@
         loopStarted: false,
         memes: [],
         activeUrl: null,
+        capabilities: null,
       };
 
       routeLabel.textContent = window.location.origin;
@@ -384,9 +386,27 @@
       }
 
       async function boot() {
+        await loadCapabilities();
         await loadMemes();
         await checkBackend();
         bindActions();
+      }
+
+      async function loadCapabilities() {
+        try {
+          const response = await fetch("/api/capabilities");
+          state.capabilities = await response.json();
+        } catch (error) {
+          state.capabilities = null;
+          console.error(error);
+        }
+
+        const supportsPhotoBooth = state.capabilities?.photo_app?.supported === false ? false : true;
+        if (!supportsPhotoBooth) {
+          photoBoothButton.style.display = "none";
+          previewNote.textContent =
+            "Caminho alternativo: envie uma foto por arquivo ou cole uma imagem com Ctrl+V/Cmd+V.";
+        }
       }
 
       async function checkBackend() {
@@ -405,7 +425,8 @@
             });
             const data = await response.json();
             if (data.status === "ok") {
-              setHint("Photo Booth aberto. Tire uma foto, salve e envie o arquivo para o painel.");
+              const appLabel = state.capabilities?.photo_app?.label || "o app de fotos";
+              setHint(`${appLabel} aberto. Tire uma foto, salve e envie o arquivo para o painel.`);
             } else {
               setHint(data.message || "Nao foi possivel abrir o Photo Booth.", true);
             }
